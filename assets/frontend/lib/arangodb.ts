@@ -37,20 +37,27 @@ export class ArangoDBService {
     const pass = password || process.env.ARANGODB_PASSWORD || '';
 
     try {
-      // Initialize the database connection
+      // Initialize connection to _system database first
+      const systemDb = new Database({
+        url: connectionUrl,
+        databaseName: '_system',
+        auth: { username: user, password: pass },
+      });
+
+      // Check if target database exists, create if it doesn't
+      const databases = await systemDb.listDatabases();
+      if (!databases.includes(dbName)) {
+        console.log(`Database ${dbName} does not exist, creating it...`);
+        await systemDb.createDatabase(dbName);
+        console.log(`Database ${dbName} created successfully`);
+      }
+
+      // Now connect to the target database
       this.db = new Database({
         url: connectionUrl,
         databaseName: dbName,
         auth: { username: user, password: pass },
       });
-
-      // Check if database exists, create if it doesn't
-      const dbExists = await this.db.exists();
-      if (!dbExists) {
-        console.log(`Database ${dbName} does not exist, creating it...`);
-        await this.db.createDatabase(dbName);
-        this.db.useDatabase(dbName);
-      }
 
       // Check if collections exist, create if they don't
       const collections = await this.db.listCollections();

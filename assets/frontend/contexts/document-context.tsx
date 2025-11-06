@@ -106,12 +106,34 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isInitialized) {
       try {
+        // Check localStorage version to clear stale data
+        const STORAGE_VERSION = '2.0'; // Increment this to force clear old data
+        const currentVersion = localStorage.getItem('txt2kg_storage_version');
+
+        if (currentVersion !== STORAGE_VERSION) {
+          console.log('Storage version mismatch - clearing old cached documents');
+          localStorage.removeItem('txt2kg_documents');
+          localStorage.removeItem('graphTriples');
+          localStorage.removeItem('graphDocumentName');
+          localStorage.setItem('txt2kg_storage_version', STORAGE_VERSION);
+        }
+
         const savedDocuments = localStorage.getItem('txt2kg_documents')
         if (savedDocuments) {
           const parsedDocuments = JSON.parse(savedDocuments)
-          
+
+          // Filter out documents with very long filenames (likely from bad upload)
+          const validDocuments = parsedDocuments.filter((doc: any) => {
+            const hasLongFilename = doc.name && doc.name.length > 100;
+            if (hasLongFilename) {
+              console.log(`Skipping cached document with long filename: ${doc.name.substring(0, 50)}...`);
+              return false;
+            }
+            return true;
+          });
+
           // Reconstruct documents with placeholder File objects
-          const reconstructedDocs = parsedDocuments.map((doc: any) => {
+          const reconstructedDocs = validDocuments.map((doc: any) => {
             // Create a blob from the content if available
             let file: File;
             if (doc.content) {
@@ -122,20 +144,27 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
               // Create an empty placeholder if no content is available
               file = new File([], doc.name, { type: 'text/plain' });
             }
-            
+
             return {
               ...doc,
               file
             };
           });
-          
-          console.log(`Restored ${reconstructedDocs.length} documents from localStorage`);
-          setDocuments(reconstructedDocs);
+
+          if (reconstructedDocs.length > 0) {
+            console.log(`Restored ${reconstructedDocs.length} valid documents from localStorage`);
+            setDocuments(reconstructedDocs);
+          } else {
+            console.log('No valid documents found in localStorage');
+            localStorage.removeItem('txt2kg_documents');
+          }
         }
       } catch (error) {
         console.error('Error loading documents from localStorage:', error);
+        // Clear corrupted localStorage
+        localStorage.removeItem('txt2kg_documents');
       }
-      
+
       setIsInitialized(true);
     }
   }, [isInitialized]);

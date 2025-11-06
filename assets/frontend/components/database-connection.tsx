@@ -47,11 +47,12 @@ export function DatabaseConnection({ className }: DatabaseConnectionProps) {
       
       if (graphDbType === "neo4j") {
         // Neo4j connection logic
-        const dbUrl = localStorage.getItem("NEO4J_URL")
-        const dbUsername = localStorage.getItem("NEO4J_USERNAME")
-        const dbPassword = localStorage.getItem("NEO4J_PASSWORD")
-        
-        // Add query parameters if credentials exist
+        // Try both uppercase and lowercase keys for backwards compatibility
+        const dbUrl = localStorage.getItem("NEO4J_URL") || localStorage.getItem("neo4j_url")
+        const dbUsername = localStorage.getItem("NEO4J_USERNAME") || localStorage.getItem("neo4j_user")
+        const dbPassword = localStorage.getItem("NEO4J_PASSWORD") || localStorage.getItem("neo4j_password")
+
+        // Add query parameters only if credentials exist (server env vars take priority)
         const queryParams = new URLSearchParams()
         if (dbUrl) queryParams.append("url", dbUrl)
         if (dbUsername) queryParams.append("username", dbUsername)

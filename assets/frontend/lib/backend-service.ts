@@ -101,18 +101,25 @@ export class BackendService {
     }
     
     // Check if sentence-transformer service is available
-    try {
-      // Remove the check skip in development mode
-      const response = await axios.get(`${this.sentenceTransformerUrl}/health`);
-      console.log(`Connected to SentenceTransformer service: ${response.data.model}`);
+    // Skip check if using NVIDIA embeddings
+    const embeddingsProvider = process.env.EMBEDDINGS_PROVIDER || '';
+    if (embeddingsProvider === 'nvidia') {
+      console.log('Using NVIDIA embeddings provider, skipping sentence-transformer health check');
       this.initialized = true;
-    } catch (error) {
-      console.error(`Failed to connect to sentence-transformer service: ${error}`);
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Development mode: Continuing despite sentence transformer error');
+    } else {
+      try {
+        // Remove the check skip in development mode
+        const response = await axios.get(`${this.sentenceTransformerUrl}/health`);
+        console.log(`Connected to SentenceTransformer service: ${response.data.model}`);
         this.initialized = true;
-      } else {
-        throw new Error('Sentence transformer service is not available');
+      } catch (error) {
+        console.error(`Failed to connect to sentence-transformer service: ${error}`);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Development mode: Continuing despite sentence transformer error');
+          this.initialized = true;
+        } else {
+          throw new Error('Sentence transformer service is not available');
+        }
       }
     }
   }

@@ -75,5 +75,11 @@ export function getSetting(key: string): string | null {
  * Get the currently selected graph database type
  */
 export function getGraphDbType(): GraphDBType {
+  // Check environment variable first (takes precedence)
+  const envType = process.env.GRAPH_DB_TYPE;
+  if (envType === 'neo4j' || envType === 'arangodb') {
+    return envType as GraphDBType;
+  }
+  // Fall back to server settings or default to arangodb
   return (serverSettings.graph_db_type as GraphDBType) || 'arangodb';
 } 

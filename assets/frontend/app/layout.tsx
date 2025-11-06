@@ -20,8 +20,8 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: "txt2kg | NVIDIA Knowledge Graph Builder",
-  description: "Convert text documents to knowledge graphs using NVIDIA AI",
+  title: "Dafe Graphs | Knowledge Graph Builder",
+  description: "Convert text documents to knowledge graphs using AI",
     generator: 'v0.dev'
 }
 
@@ -40,13 +40,7 @@ export default function RootLayout({
             <header className="border-b border-border/50 backdrop-blur-md dark:bg-background/95 bg-background sticky top-0 z-50 shadow-sm">
               <div className="container mx-auto px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <NvidiaIcon className="h-8 w-8" />
-                  <div>
-                    <span className="text-xl font-bold gradient-text">txt2kg</span>
-                    <span className="ml-2 text-xs bg-primary/20 text-[#76b900] px-2 py-0.5 rounded-full">
-                      Powered by NVIDIA AI
-                    </span>
-                  </div>
+                  <span className="text-xl font-bold gradient-text">dafe graphs</span>
                 </div>
                 <div className="flex items-center gap-4">
                   <Link

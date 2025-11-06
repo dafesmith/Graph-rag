@@ -41,25 +41,51 @@ export async function GET(req: NextRequest) {
     
     // Extract triples from the graph data
     const triples: Triple[] = [];
-    
+
     // Map of node IDs to names
     const nodeMap = new Map();
     for (const node of graphData.nodes) {
       nodeMap.set(node.id, node.name);
     }
-    
+
     // Convert relationships to triples
-    for (const rel of graphData.relationships) {
-      const subject = nodeMap.get(rel.source);
-      const object = nodeMap.get(rel.target);
+    // Handle both 'relationships' and 'links' property names for compatibility
+    const relationships = (graphData as any).relationships || (graphData as any).links || [];
+
+    console.log(`Processing ${relationships.length} relationships...`);
+    console.log(`NodeMap has ${nodeMap.size} entries`);
+
+    for (const rel of relationships) {
+      // The source might be a node ID or a direct name (e.g., document name)
+      // The target is typically a node ID
+      let subject = nodeMap.get(rel.source);
+      let object = nodeMap.get(rel.target);
+
+      // If source is not in nodeMap, it might be the actual name (like a document name)
+      if (!subject) {
+        // Use the source value directly if it's not a numeric ID
+        if (rel.source && typeof rel.source === 'string') {
+          subject = rel.source;
+        }
+      }
+
+      // If object is not in nodeMap, try using it directly
+      if (!object) {
+        if (rel.target && typeof rel.target === 'string') {
+          object = rel.target;
+        }
+      }
+
       const predicate = rel.type;
-      
+
       if (subject && predicate && object) {
         triples.push({
           subject,
           predicate,
           object
         });
+      } else {
+        console.warn(`Skipping relationship: source=${rel.source} -> target=${rel.target}, mapped: ${subject} -> ${object}`);
       }
     }
     

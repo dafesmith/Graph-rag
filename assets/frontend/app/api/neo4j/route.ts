@@ -13,16 +13,17 @@ let isInitialized = false;
  */
 function ensureConnection(request?: NextRequest) {
   try {
+    // Environment variables take absolute priority
     let uri = process.env.NEO4J_URI;
     let username = process.env.NEO4J_USER;
     let password = process.env.NEO4J_PASSWORD;
 
-    // Override with URL parameters if provided
-    if (request) {
+    // Only use URL parameters if environment variables are not set
+    if (request && !process.env.NEO4J_URI) {
       const params = request.nextUrl.searchParams;
       if (params.has('url')) uri = params.get('url') as string;
-      if (params.has('username')) username = params.get('username') as string;
-      if (params.has('password')) password = params.get('password') as string;
+      if (!process.env.NEO4J_USER && params.has('username')) username = params.get('username') as string;
+      if (!process.env.NEO4J_PASSWORD && params.has('password')) password = params.get('password') as string;
     }
 
     // Connect to Neo4j instance

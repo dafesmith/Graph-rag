@@ -59,15 +59,22 @@ export class RAGService {
       await this.pineconeService.initialize();
       await this.embeddingsService.initialize();
 
-      // Initialize LLM - Try NVIDIA first, then fall back to error
+      // Initialize LLM with NVIDIA API
       const nvidiaApiKey = process.env.NVIDIA_API_KEY;
       if (!nvidiaApiKey) {
-        throw new Error('RAG service requires NVIDIA_API_KEY to be set in environment variables. xAI integration has been removed.');
+        throw new Error('RAG service requires NVIDIA_API_KEY to be set in environment variables.');
       }
-      
-      // Note: This is a placeholder - NVIDIA LLM integration would need to be implemented
-      // For now, we'll throw an error to indicate RAG service is not available
-      throw new Error('RAG service is temporarily unavailable after xAI removal. Please implement alternative LLM provider.');
+
+      // Initialize NVIDIA LLM via OpenAI-compatible API
+      this.llm = new ChatOpenAI({
+        openAIApiKey: nvidiaApiKey,
+        configuration: {
+          baseURL: "https://integrate.api.nvidia.com/v1"
+        },
+        modelName: "meta/llama-3.1-8b-instruct",
+        temperature: 0.2,
+        maxTokens: 1024
+      });
 
       this.initialized = true;
       console.log('RAG service initialized successfully');

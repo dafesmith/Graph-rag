@@ -82,9 +82,9 @@ export function KnowledgeGraphViewer() {
     }
   }, [isFullscreen]);
 
-  // Fetch stored triples from ArangoDB
+  // Fetch stored graph data from the graph database (Neo4j/ArangoDB)
   useEffect(() => {
-    const fetchStoredTriples = async () => {
+    const fetchStoredGraphData = async () => {
       if (!includeStoredTriples) {
         setStoredTriples([])
         return
@@ -92,25 +92,49 @@ export function KnowledgeGraphViewer() {
 
       try {
         setLoadingStoredTriples(true)
-        const response = await fetch('/api/graph-db/triples')
-        
+        // Fetch from /api/graph-db which returns nodes and links directly
+        const response = await fetch('/api/graph-db')
+
         if (response.ok) {
           const data = await response.json()
-          setStoredTriples(data.triples || [])
-          console.log(`Loaded ${data.triples?.length || 0} stored triples from ArangoDB`)
+          console.log(`Fetched ${data.nodes?.length || 0} nodes and ${data.links?.length || 0} links from ${data.databaseType || 'graph database'}`)
+
+          // Convert nodes and links to triples format
+          const triples: Triple[] = []
+          if (data.links && data.nodes) {
+            // Create a map of node IDs to names
+            const nodeMap = new Map<string, string>()
+            data.nodes.forEach((node: any) => {
+              nodeMap.set(node.id, node.name || `Node ${node.id}`)
+            })
+
+            // Convert links to triples
+            data.links.forEach((link: any) => {
+              const subject = nodeMap.get(link.source) || link.source
+              const object = nodeMap.get(link.target) || link.target
+              const predicate = link.type || link.label || 'RELATED_TO'
+
+              if (subject && predicate && object) {
+                triples.push({ subject, predicate, object })
+              }
+            })
+          }
+
+          setStoredTriples(triples)
+          console.log(`Converted to ${triples.length} triples for visualization`)
         } else {
-          console.warn('Failed to fetch stored triples:', response.statusText)
+          console.warn('Failed to fetch stored graph data:', response.statusText)
           setStoredTriples([])
         }
       } catch (error) {
-        console.error('Error fetching stored triples:', error)
+        console.error('Error fetching stored graph data:', error)
         setStoredTriples([])
       } finally {
         setLoadingStoredTriples(false)
       }
     }
 
-    fetchStoredTriples()
+    fetchStoredGraphData()
   }, [includeStoredTriples])
 
   // Generate combined graph data from all processed documents and stored triples

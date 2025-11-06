@@ -26,17 +26,21 @@ async function ensureConnection(request?: NextRequest): Promise<GraphDBType> {
     const graphDbService = getGraphDbService(graphDbType);
     
     if (graphDbType === 'neo4j') {
-      // Neo4j connection params
+      // Neo4j connection params - Environment variables take absolute priority
       let uri = process.env.NEO4J_URI;
       let username = process.env.NEO4J_USER || process.env.NEO4J_USERNAME;
       let password = process.env.NEO4J_PASSWORD;
 
-      // Override with URL parameters if provided
-      if (request) {
+      // Only use URL parameters if environment variables are not set
+      if (request && !process.env.NEO4J_URI) {
         const params = request.nextUrl.searchParams;
         if (params.has('url')) uri = params.get('url') as string;
-        if (params.has('username')) username = params.get('username') as string;
-        if (params.has('password')) password = params.get('password') as string;
+        if (!process.env.NEO4J_USER && !process.env.NEO4J_USERNAME && params.has('username')) {
+          username = params.get('username') as string;
+        }
+        if (!process.env.NEO4J_PASSWORD && params.has('password')) {
+          password = params.get('password') as string;
+        }
       }
 
       // Connect to Neo4j instance
@@ -79,16 +83,32 @@ export async function GET(request: NextRequest) {
     
     // Get graph data from the database
     const graphData = await graphDbService.getGraphData();
-    
+
     // Transform to format expected by the frontend
-    const nodes = graphData.nodes.map(node => ({
-      ...node,
-      name: node.name || `Node ${node.id}`,
-      label: node.labels?.[0] || 'Entity',
-      val: 1, // Default size
-      color: node.labels?.includes('Entity') ? '#ff6b6b' : '#4ecdc4'
-    }));
-    
+    const nodes = graphData.nodes.map(node => {
+      const rawName = node.name || `Node ${node.id}`;
+
+      // Truncate long names (especially document filenames)
+      let displayName = rawName;
+      if (rawName.length > 50) {
+        // If it looks like a filename, show just the beginning
+        if (rawName.includes('_') && (rawName.endsWith('.txt') || rawName.includes('10.1101'))) {
+          displayName = rawName.substring(0, 40) + '...' + rawName.substring(rawName.length - 10);
+        } else {
+          displayName = rawName.substring(0, 50) + '...';
+        }
+      }
+
+      return {
+        ...node,
+        name: displayName,
+        fullName: rawName, // Keep full name for tooltips
+        label: node.labels?.[0] || 'Entity',
+        val: 1, // Default size
+        color: node.labels?.includes('Entity') ? '#ff6b6b' : '#4ecdc4'
+      };
+    });
+
     const links = graphData.relationships.map(rel => ({
       ...rel,
       label: rel.type || 'RELATED_TO'
